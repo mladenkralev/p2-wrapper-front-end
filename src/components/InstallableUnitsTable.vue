@@ -4,7 +4,7 @@
       <v-card>
         <v-card-title>
           <v-text-field
-            v-model="searchSingleRepository"
+            v-model="searchInstallbleUnits"
             append-icon="search"
             label="Search"
             single-line
@@ -13,9 +13,9 @@
         </v-card-title>
 
         <v-data-table
-          :headers="headersSingleRepository"
-          :items="iusSingleRepository"
-          :search="searchSingleRepository"
+          :headers="headersInstallbleUnits"
+          :items="installableUnits"
+          :search="searchInstallbleUnits"
           :expand="expand"
           class="elevation-1"
         >
@@ -42,7 +42,7 @@
               :value="true"
               color="error"
               icon="warning"
-            >Your search for "{{ searchSingleRepository }}" found no results.</v-alert>
+            >Your search for "{{ searchInInstallableUnits }}" found no results.</v-alert>
           </template>
         </v-data-table>
       </v-card>
@@ -52,15 +52,15 @@
 
 <script>
 export default {
-  props: ['iusSingleRepository'],
+  props: ['installableUnits'],
 
   data: function() {
     return {
       // SINGLE TABLE CONTENT
       object: [1, 2, 3, 4],
       expand: false,
-      searchSingleRepository: "",
-      headersSingleRepository: [{ text: "name", value: "id" }],
+      searchInstallbleUnits: "",
+      headersInstallbleUnits: [{ text: "name", value: "id" }],
     };
   }
 };

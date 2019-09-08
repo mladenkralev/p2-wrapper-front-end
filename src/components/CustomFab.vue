@@ -53,27 +53,55 @@
         <div>
           <img src="../images/Drops-128px.gif" hidden v-if="isDisabled" />
           <div class="container-fluid" if="!isDisabled">
-              <template>
+            <template>
+              <v-app id="inspire">
                 <v-card>
                   <v-card-title>
                     <v-text-field
-                      v-model="searchAllRepositories"
                       append-icon="search"
                       label="Search"
+                      v-model="searchAllIus"
                       single-line
                       hide-details
                     ></v-text-field>
                   </v-card-title>
                   <v-data-table
-                    :headers="headersAllRepositories"
+                    v-model="selected"
+                    :headers="headersAllIus"
                     :items="iusAllRepositories"
-                    :search="searchAllRepositories"
+                    :search="searchAllIus"
+                    :pagination.sync="pagination"
                     class="elevation-1"
                   >
-                    <template v-slot:items="props">
-                      <tr @click="repositoryClick(props.item)">
+                    <template slot="headers" slot-scope="props">
+                       <tr :active="props.selected" @click="props.selected = !props.selected">
+                        <th>
+                          <v-checkbox
+                            :input-value="props.all"
+                            :indeterminate="props.indeterminate"
+                            primary
+                            hide-details
+                            @click.native="toggleAll"
+                          ></v-checkbox>
+                        </th>
+                        <th
+                          v-for="header in props.headers"
+                          :key="header.text"
+                          :class="['column sortable', pagination.descending ? 'desc' : 'asc', header.value === pagination.sortBy ? 'active' : '']"
+                          @click="changeSort(header.value)"
+                        >
+                          <v-icon small>arrow_upward</v-icon>
+                          {{ header.text }}
+                        </th>
+                      </tr>
+                    </template>
+                    <template slot="items" slot-scope="props">
+                      <tr>
+                        <td>
+                          <v-checkbox hide-details @click.native="toggleOne(props.item)"></v-checkbox>
+                        </td>
                         <td>{{ props.item.repositoryName }}</td>
-                        <td class="text-xs-left">{{ props.item.repoSize }}</td>
+                        <td>{{ props.item.version }}</td>
                       </tr>
                     </template>
                     <template v-slot:no-results>
@@ -81,16 +109,17 @@
                         :value="true"
                         color="error"
                         icon="warning"
-                      >Your search for "{{ search }}" found no results.</v-alert>
+                      >Your search for "{{ searchAllIus }}" found no results.</v-alert>
                     </template>
                   </v-data-table>
                 </v-card>
-              </template>
+              </v-app>
+            </template>
           </div>
         </div>
         <template slot="modal-footer" slot-scope="{ cancel }">
           <b-button size="sm" @click="cancel()">Cancel</b-button>
-          <b-button size="sm" variant="primary" @click="createRepository()">CreateRepository</b-button>
+          <b-button size="sm" variant="primary" @click="createProfile()">Create Profile</b-button>
         </template>
       </b-modal>
     </div>
@@ -125,22 +154,29 @@ export default {
         { name: "cache", icon: "cached" },
         { name: "invokeModal", icon: "add" }
       ],
-      // All repositories table
-      searchAllRepositories: "",
-      headersAllRepositories: [
+
+      // All ius table
+      selected: [],
+      searchAllIus: "",
+      headersAllIus: [
         {
           text: "name",
           value: "repositoryName"
         },
-        { text: "size", value: "repoSize" }
+        {
+          text: "version",
+          value: "version"
+        }
       ],
       iusAllRepositories: [
         {
           repositoryName: "KitKat",
-          repoSize: 518
+          version: "0.0.0.0"
         }
       ],
-
+      pagination: {
+        sortBy: "name"
+      }
     };
   },
   computed: {
@@ -168,7 +204,7 @@ export default {
       } else {
         if (this.containerType === "profiles") {
           this.$bvModal.show("addP2Profiles");
-          this.getAvailableRepositories();
+          this.getAllUniqueInstallableUnits();
         }
       }
     },
@@ -216,27 +252,132 @@ export default {
         });
     },
 
-    getAvailableRepositories() {
+    getAllUniqueInstallableUnits() {
       var repoSizes = [];
       var json = null;
       var vue = this;
 
       this.axios
-        .get("http://localhost/api/repository/list?username=mladen")
-        .then(function(response) {
-          json = response.data;
-
-          var arrayLength = json.createdRepositories.length;
-          for (var i = 0; i < arrayLength; i++) {
-            var currentRepository = json.createdRepositories[i];
+        .get("http://localhost/api/repository/list?username=mladen", {
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, PUT, POST, DELETE, OPTIONS"
           }
-          vue.iusAllRepositories = response.data.createdRepositories;
+        })
+        .then(function(response) {
+          //cleans
+          var tempLength = vue.iusAllRepositories.length;
+          for (var index = 0; index < tempLength; index++) {
+            vue.iusAllRepositories.pop();
+          }
+
+          for (var i = 0; i < response.data.length; i++) {
+            var singleRepository = response.data[i];
+            var tempIus = [];
+
+            for (var j = 0; j < singleRepository.installableUnits.length; j++) {
+              var tempIuName =
+                singleRepository.installableUnits[j].artifacts[0].id;
+              var tempIuVersion =
+                singleRepository.installableUnits[j].artifacts[0].version
+                  .major +
+                "." +
+                singleRepository.installableUnits[j].artifacts[0].version
+                  .minor +
+                "." +
+                singleRepository.installableUnits[j].artifacts[0].version.micro;
+
+              if (vue.iusAllRepositories.length == 0) {
+                // first element
+                vue.iusAllRepositories.push({
+                  repositoryName: tempIuName,
+                  version: tempIuVersion
+                });
+              } else {
+                var isFoundInSavedInstallableUnits = false;
+                for (var k = 0; k < vue.iusAllRepositories.length; k++) {
+                  var currentSavedIu = vue.iusAllRepositories[k];
+                  if (
+                    currentSavedIu.repositoryName === tempIuName &&
+                    currentSavedIu.version === tempIuVersion
+                  ) {
+                    isFoundInSavedInstallableUnits = true;
+                  }
+                }
+                if (!isFoundInSavedInstallableUnits) {
+                  vue.iusAllRepositories.push({
+                    repositoryName: tempIuName,
+                    version: tempIuVersion
+                  });
+                }
+              }
+            }
+          }
         })
         .catch(function(error) {
           console.log(error);
         });
     },
 
+    createProfile() {
+      var vue = this;
+      var tempInstallableUnits = [];
+
+      for (var index = 0; index < this.selected.length; index++) {
+        tempInstallableUnits.push(this.selected[index]);
+      }
+      var data = { installableUnits: tempInstallableUnits };
+
+      this.axios
+        .post(
+          "http://localhost:80/api/profile/create?username=mladen&profileName=test1",
+          data,
+          {
+            headers: {
+              "Access-Control-Allow-Origin": "*",
+              "Access-Control-Allow-Methods": "GET, PUT, POST, DELETE, OPTIONS"
+            }
+          }
+        )
+        .then(function(response) {
+          vue.$emit("profileWasAdded", true);
+          vue.$bvModal.hide("addP2Profiles");
+          console.log("done");
+        })
+        .catch(function(error) {
+          vue.$emit("profileWasAdded", false);
+          vue.$bvModal.hide("addP2Profiles");
+          console.log(error);
+        });
+    },
+    toggleOne(item) {
+      if (this.selected.some(e => e.repositoryName === item.repositoryName)) {
+         console.log("PopUp")
+         this.selected.pop(item);
+      } else {
+        console.log("adding")
+        this.selected.push(item);
+
+      }
+    },
+    toggleAll() {
+      console.log("asdasd");
+      if (this.selected.length) this.selected = [];
+      else this.selected = this.iusAllRepositories.slice();
+    },
+    changeSort(column) {
+      if (this.pagination.sortBy === column) {
+        this.pagination.descending = !this.pagination.descending;
+      } else {
+        this.pagination.sortBy = column;
+        this.pagination.descending = false;
+      }
+    }
   }
 };
 </script>
+<style>
+.application--wrap {
+  min-height: 0;
+}
+</style>

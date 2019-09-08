@@ -34,7 +34,11 @@
         </div>
         <!-- ############# PROFILES #############-->
         <div v-else-if="containerType === 'profiles'">
-          <profiles-view  :noRepositories="noRepositories" :containerType="containerType"/>
+          <profiles-view  
+            @profileExists="noProfiles=$event"
+            :noRepositories="noRepositories" 
+            :noProfiles="noProfiles" 
+            :containerType="containerType"/>
         </div>
       </div>
     </div>
@@ -47,6 +51,7 @@ export default {
     return {
       containerType: "repositories",
       noRepositories: true,
+      noProfiles: true,
       tabRepositoryIndex: 0
     };
   },
@@ -148,7 +153,7 @@ body {
 }
 
 .main-area-repository-summary {
-  height: 65vh;
+  height: 85vh;
   display: inline-flex;
   min-width: 40vh;
   width: 100%;

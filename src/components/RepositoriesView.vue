@@ -34,17 +34,7 @@
                     <div class="elevation-1" id="chart">
                       <apexchart type="donut" width="480" :options="chartOptions" :series="series" />
                     </div>
-                    <button @click="updateChart()">Refresh</button>
-
-                    <a
-                      href="#addP2Profile"
-                      data-toggle="modal"
-                      data-target="#addP2Profile"
-                      id="no-profile-button"
-                      class="btn btn-primary btn-info"
-                    >
-                      <span class="glyphicon glyphicon-plus">+</span>
-                    </a>
+                    <custom-fab :containerType="containerType" @repositoryWasAdded="updateChart()"></custom-fab>
                     <p id="no-profile-text">No profiles found</p>
                   </div>
 
@@ -65,6 +55,7 @@
                           :items="iusAllRepositories"
                           :search="searchAllRepositories"
                           class="elevation-1"
+                          :rows-per-page-items="[10]"
                         >
                           <template v-slot:items="props">
                             <tr @click="repositoryClick(props.item)">
@@ -85,16 +76,13 @@
                   </div>
                 </div>
               </div>
-              <div class="row no-gutters" id="overview">
-                <h1>Some summary</h1>
-              </div>
             </div>
           </b-tab>
 
-          <b-tab title="Search in repository">
-            <b-card-text>Tab Contents 2</b-card-text>
+          <b-tab title="Search in repository" title-item-class="disabledTab">
+            <b-card-text>Repository content</b-card-text>
             <div class="row no-gutters main-row">
-              <repository-table :iusSingleRepository="iusSingleRepository"></repository-table>
+              <installable-units-table :installableUnits="iusSingleRepository"></installable-units-table>
             </div>
           </b-tab>
         </b-tabs>
@@ -109,7 +97,7 @@ export default {
 
   data: function() {
     return {
-      tabRepositoryIndex:1,
+      tabRepositoryIndex: 0,
 
         // All repositories table
       searchAllRepositories: "",
@@ -151,7 +139,7 @@ export default {
 
         responsive: [
           {
-            breakpoint: 480,
+            breakpoint: 360,
             options: {
               chart: {
                 width: "100%"
@@ -180,6 +168,8 @@ export default {
   methods: {
     repositoryClick(selectedRepository) {
       var vue = this;
+      this.tabRepositoryIndex = 1;
+
       console.log(
         "Sending request to " +
           "http://localhost/api/repository/get?username=mladen&repository=" +
@@ -246,7 +236,6 @@ export default {
         .catch(function(error) {
           console.log("FAILURE!!" + error);
         });
-      this.tabRepositoryIndex = 1;
     },
 
     updateChart() {
@@ -266,21 +255,39 @@ export default {
 
           console.log("Response is " + response);
           console.log("Json is" + json);
-          var arrayLength = json.createdRepositories.length;
+
+          var arrayLength = json.length;
           for (var i = 0; i < arrayLength; i++) {
-            var currentRepository = json.createdRepositories[i];
+            var currentRepository = json[i];
             vue.chartOptions.labels.push(currentRepository.repositoryName);
             repoSizes.push(currentRepository.repoSize);
           }
           vue.series = repoSizes;
-          vue.iusAllRepositories = response.data.createdRepositories;
+          vue.iusAllRepositories = response.data;
         })
         .catch(function(error) {
           console.log(error);
         });
     }
-  }
+  },
+  created() {
+    var vue = this;
+    // checks for repositories
+    this.axios.get("http://localhost/api/repository/list?username=mladen")
+        .then(function(response) {
+          var arrayLength = response.data.length;
+          if(arrayLength != 0 ) {
+            vue.updateChart();
+          }
+        })
+        .catch(function(error) {
+           this.noRepositories = true;
+        });
+  },
 };
 </script>
 <style>
+.disabledTab{
+    pointer-events: none;
+}
 </style>

@@ -8,21 +8,25 @@ import App from './App.vue'
 import axios from 'axios'
 import VueAxios from 'vue-axios'
 import Vuetify from 'vuetify'
-
+import VueLodash from 'vue-lodash'
 import VModal from 'vue-js-modal'
-Vue.use(VModal)
 
+const options = { name: 'lodash' } // customize the way you want to call it
+
+Vue.use(VueLodash, options) // options is optional
+Vue.use(VModal)
 Vue.use(BootstrapVue);
 Vue.use(VueApexCharts)
 Vue.use(VueAxios, axios)
 Vue.component('apexchart', VueApexCharts)
 Vue.use(Vuetify)
 
+//Custom components
 import CustomFab from './components/CustomFab.vue'
 Vue.component("custom-fab" , CustomFab)
 
-import RepositoryTable from './components/RepositoryTable.vue'
-Vue.component("repository-table" , RepositoryTable)
+import InstallableUnitsTable from './components/InstallableUnitsTable.vue'
+Vue.component("installable-units-table" , InstallableUnitsTable)
 
 import Sidebar from './components/Sidebar.vue'
 Vue.component("sidebar" , Sidebar)
